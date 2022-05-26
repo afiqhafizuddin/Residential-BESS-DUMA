@@ -184,8 +184,8 @@ for j=1: LS-1
     end
 end
 
-CHA_start(CHA_start==0) = [];
-CHA_stop(CHA_stop==0) = [];
+CHA_start(CHA_start==0) = [1];
+CHA_stop(CHA_stop==0) = [1];
 
 % discharging time
 
@@ -197,8 +197,8 @@ for j=1:LS-1
     end
 end
 
-DISCHA_start(DISCHA_start==0)=[];
-DISCHA_stop(DISCHA_stop==0)=[];
+DISCHA_start(DISCHA_start==0)=[1];
+DISCHA_stop(DISCHA_stop==0)=[1];
 
 % Load Flow with a Battery
 SOC_Final = 0.8;
@@ -346,7 +346,7 @@ for h=1:LS
         for g = 1:RB
             DSSCircuit.SetActiveElement(AllStorageNames{g});
             SOC(h,g) = str2double(DSSCircuit.ActiveDSSElement.Properties('%stored').Val);
-            SOC(h.g) = SOC(h,g)/100;
+            SOC(h,g) = SOC(h,g)/100;
 
             % Extract battery power
             bp(h,:) = DSSCircuit.ActiveCktElement.Powers;
@@ -567,68 +567,68 @@ for h=1:LS
 
     % Feeder 1
     DSSCircuit.SetActiveElement(['Line.LINE1']);
-    Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
+    Source1_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F1_wt_vc(h,1) = 1*(Source1_wt_vc(h,1)+Source1_wt_vc(h,3)+Source1_wt_vc(h,5));
 
     % Feeder 2
     DSSCircuit.SetActiveElement(['Line.LINE2']);
-    Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
+    Source2_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F2_wt_vc(h,1) = 1*(Source2_wt_vc(h,1)+Source2_wt_vc(h,3)+Source2_wt_vc(h,5));
 
     % Feeder 3
     DSSCircuit.SetActiveElement(['Line.LINE6']);
-    Source2(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F2(i,1) = 1*(Source2(i,1)+Source2(i,3)+Source2(i,5));
+    Source3_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F3_wt_vc(h,1) = 1*(Source3_wt_vc(h,1)+Source3_wt_vc(h,3)+Source3_wt_vc(h,5))
 
     % Feeder 4
     DSSCircuit.SetActiveElement(['Line.LINE10']);
-    Source3a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F3a(i,1) = 1*(Source3a(i,1)+Source3a(i,3)+Source3a(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 5
     DSSCircuit.SetActiveElement(['Line.LINE12']);
-    Source3b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F3b(i,1) = 1*(Source3b(i,1)+Source3b(i,3)+Source3b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 6
     DSSCircuit.SetActiveElement(['Line.LINE15']);
-    Source4a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4a(i,1) = 1*(Source4a(i,1)+Source4a(i,3)+Source4a(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 7
     DSSCircuit.SetActiveElement(['Line.LINE20']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 8
     DSSCircuit.SetActiveElement(['Line.LINE22']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 9
     DSSCircuit.SetActiveElement(['Line.LINE27']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 10
     DSSCircuit.SetActiveElement(['Line.LINE30']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
      
     % Feeder 11
     DSSCircuit.SetActiveElement(['Line.LINE33']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
     
     % Feeder 12
     DSSCircuit.SetActiveElement(['Line.LINE34']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     % Feeder 13
     DSSCircuit.SetActiveElement(['Line.LINE37']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
 
     Grid_power_wB_wt_vc(h,1) = Grid_power_F1_wt_vc(h,1)+Grid_power_F2_wt_vc(h,1)+Grid_power_F3a_wt_vc(h,1)+Grid_power_F3b_wt_vc(h,1)+Grid_power_F4a_wt_vc(h,1)+Grid_power_F4b_wt_vc(h,1);
 
@@ -1007,5 +1007,6 @@ E_WB_D2=sum(GUI_WB_WVC_D2(:,1))
    
                     
     
+
 
 
