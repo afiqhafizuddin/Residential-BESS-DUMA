@@ -1,0 +1,10 @@
+Clear
+
+New Object=Circuit.TNB_DUMA BasekV=33 pu=1.0 Angle=0 phases=3 bus1=PPU_DUMA_33kV BaseFreq=5
+
+Redirect transformer.dss
+Redirect lines.dss
+Redirect peak_loads.dss 
+Redirect pv140pc.dss
+
+set defaultbasefreq=50
