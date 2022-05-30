@@ -2,7 +2,6 @@
 
 New Loadshape.daily_load npts=2881  minterval=1 mult=(File=two_day_daily_load_latest.txt)
 
-
 ! FEEDER 1 
 New Object=Load.LOAD1 bus1=PPU_DUMA_VCB1 phases=3 kV=11 kW=85 kvar=366 PF=0.89
 
