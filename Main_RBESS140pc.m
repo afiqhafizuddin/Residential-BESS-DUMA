@@ -1,5 +1,4 @@
 % This code for RBESS
-
 clc 
 clear all
 close all;
@@ -7,28 +6,26 @@ close all;
 % Loading daily load pattern
 fileID = fopen("two_day_daily_load_latest.txt", "r");
 formatSpec = '%f';
-% Loadshape_data = fscanf(fileID, formatSpec);
 Loadshape_data = fscanf(fileID,formatSpec);
 
 LS = length(Loadshape_data);
 
-% 
 fileID = fopen("two_day_daily_solar_sunny.txt", "r");
 formatSpec = "%f";
 Solarshape = fscanf(fileID, formatSpec);
 
 % Variable declaration
-Voltagebase = zeros(41, LS);
-TPLbase = zeros(LS,1);
-CHA_start = zeros(LS,1);
-CHA_stop = zeros(LS,1);
-DISCHA_start = zeros(LS, 1);
-DISCHA_stop = zeros(LS,1)
-Voltagebat = zeros(41, LS );
-TPLbat = zeros(LS, 1);
-SOC = zeros(LS,38);
+Voltagebase=zeros(42, LS); % 41 = lines
+TPLbase=zeros(LS,1); % TPL = Time Piecewise ???
+CHA_start=zeros(1,LS); % charging start 
+CHA_stop=zeros(1,LS); % charging stop 
+DISCHA_start=zeros(1,LS); % discharging start
+DISCHA_stop=zeros(1,LS)
+Voltagebat = zeros(42, LS ); % voltage of batteries, put in all nodes
+TPLbat = zeros(LS,1); 
+SOC = zeros(LS,38); % state-of-chart 
 bat_power = zeros(LS,38); % 38 = number of loads
-P_expo_lim = zeros(LS,38);
+P_expo_lim = zeros(LS,38); % Power export limit, for every nodes
 net_power = zeros(LS,38);
 
 % Activating the OpenDSS Simulation Platform
@@ -41,7 +38,14 @@ DSSSolution = DSSCircuit.Solution;
 DSSActiveClass = DSSCircuit.ActiveClass;
 
 % Redirecting masters to MATLAB script
-DSSText.command = "Compile (C:\Users\Afiq Hafizuddin\Documents\MATLAB\BESS-guide\02_Residential_BESS\master_BESS_bat_500.dss)";
+
+%{
+   Create violations and overgeneration
+%}
+
+% Various Solar PV Penetration Level
+
+DSSText.command = "Compile (C:\Users\Afiq Hafizuddin\Documents\MATLAB\BESS-guide\02_Residential_BESS\master_BESS.dss)";
 
 % Load flow of the base system, setting the solving mode to daily, and activation of daily mode
 
@@ -54,81 +58,92 @@ DSSText.command = 'Set number=1';
 
 % Solving for 2881 minutes
 
-for i = 1:LS
+for i = 1:LS % "i" is for prem voltage limit
     DSSText.command = 'Solve';
     Voltagebase(:,i) = DSSCircuit.AllNodeVmagPUByPhase(1);
-    Voltagecusbefore = Voltagebase([2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end], :);
+    % Voltagecusbefore=Voltagebase([4:18,20:34,36,38:52,54:69,71:85,87:93,95:109,112:124,126:end],:);
+    Voltagecusbefore = Voltagebase([1, 2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end], :);
     Loss = DSSCircuit.Losses;
     TPLbase(i,1) = Loss(1,1)/1000;
 
     % Extract power grid demand
-    
+    %{
+       At the first nodes of every feeders
+       Source$1(i,:)
+       Grid_power_F$1
+    %}
+
+    % First Extraction: Grid Power
+    % Demand extraction
+
     % Feeder 1
     DSSCircuit.SetActiveElement(['Line.LINE1']);
     Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
     Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
 
     % Feeder 2
-    DSSCircuit.SetActiveElement(['Line.LINE2']);
-    Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
-
+    DSSCircuit.SetActiveElement(['Line.LINE2'])
+    Source2(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F2(i,1) = 1*(Source2(i,1) + Source2(i,3) + Source2(i,5));
+    
     % Feeder 3
     DSSCircuit.SetActiveElement(['Line.LINE6']);
-    Source2(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F2(i,1) = 1*(Source2(i,1)+Source2(i,3)+Source2(i,5));
-
+    Source3(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F3(i,1) = 1*(Source3(i,1)+Source3(i,3)+Source3(i,5));
+   
     % Feeder 4
-    DSSCircuit.SetActiveElement(['Line.LINE10']);
-    Source3a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F3a(i,1) = 1*(Source3a(i,1)+Source3a(i,3)+Source3a(i,5));
+    DSSCircuit.SetActiveElement(['Line.LINE10'])
+    Source4(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4(i,1) = 1*(Source4(i,1) + Source4(i,3) + Source4(i,5));
 
     % Feeder 5
-    DSSCircuit.SetActiveElement(['Line.LINE12']);
-    Source3b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F3b(i,1) = 1*(Source3b(i,1)+Source3b(i,3)+Source3b(i,5));
+    DSSCircuit.SetActiveElement(['Line.LINE12'])
+    Source5(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F5(i,1) = 1*(Source5(i,1) + Source5(i,3) + Source5(i,5));
+
 
     % Feeder 6
-    DSSCircuit.SetActiveElement(['Line.LINE15']);
-    Source4a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4a(i,1) = 1*(Source4a(i,1)+Source4a(i,3)+Source4a(i,5));
-
+    DSSCircuit.SetActiveElement(['Line.LINE15'])
+    Source6(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F6(i,1) = 1*(Source6(i,1) + Source6(i,3) + Source6(i,5));
+    
     % Feeder 7
-    DSSCircuit.SetActiveElement(['Line.LINE20']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    DSSCircuit.SetActiveElement(['Line.LINE20'])
+    Source7(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F7(i,1) = 1*(Source7(i,1) + Source7(i,3) + Source7(i,5));
+    
 
     % Feeder 8
-    DSSCircuit.SetActiveElement(['Line.LINE22']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-
+    DSSCircuit.SetActiveElement(['Line.LINE22'])
+    Source8(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F8(i,1) = 1*(Source8(i,1) + Source8(i,3) + Source8(i,5));
+    
     % Feeder 9
-    DSSCircuit.SetActiveElement(['Line.LINE27']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-
+    DSSCircuit.SetActiveElement(['Line.LINE27'])
+    Source9(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F9(i,1) = 1*(Source9(i,1) + Source9(i,3) + Source9(i,5));
+    
     % Feeder 10
-    DSSCircuit.SetActiveElement(['Line.LINE30']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    DSSCircuit.SetActiveElement(['Line.LINE30'])
+    Source10(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F10(i,1) = 1*(Source10(i,1) + Source10(i,3) + Source10(i,5));
      
     % Feeder 11
-    DSSCircuit.SetActiveElement(['Line.LINE33']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    DSSCircuit.SetActiveElement(['Line.LINE33'])
+    Source11(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F11(i,1) = 1*(Source11(i,1) + Source11(i,3) + Source11(i,5));
     
     % Feeder 12
-    DSSCircuit.SetActiveElement(['Line.LINE34']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-
+    DSSCircuit.SetActiveElement(['Line.LINE34'])
+    Source12(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F12(i,1) = 1*(Source12(i,1) + Source12(i,3) + Source12(i,5));
+    
     % Feeder 13
-    DSSCircuit.SetActiveElement(['Line.LINE37']);
-    Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-
-    Grid_power_woB(i,1) = Grid_power_F1(i,1)+Grid_power_F2(i,1)+Grid_power_F3a(i,1)+Grid_power_F3b(i,1)+Grid_power_F4a(i,1)+Grid_power_F4b(i,1);
+    DSSCircuit.SetActiveElement(['Line.LINE37'])
+    Source13(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F13(i,1) = 1*(Source13(i,1) + Source13(i,3) + Source13(i,5));
+    
+    Grid_power_woB(i,1) = Grid_power_F1(i,1)+Grid_power_F2(i,1)+Grid_power_F3(i,1)+Grid_power_F4(i,1)+Grid_power_F5(i,1)+Grid_power_F6(i,1)+Grid_power_F7(i,1)+Grid_power_F8(i,1)+Grid_power_F9(i,1)+Grid_power_F10(i,1)+Grid_power_F11(i,1)+Grid_power_F12(i,1)+Grid_power_F13(i,1);
     
     % Extract max voltage node power demand
 
@@ -142,22 +157,26 @@ for i = 1:LS
 
     % Load demand extraction
     [P_L,Q_L] = demandextraction(i,DSSObj,DSSText,DSSCircuit,DSSSolution);
-    P_L_extract(i,:)=P_L(i,:);
+    P_L_extract(i,:) = P_L(i,:); % Power Demand
 
     % Excess PV generation
-    Excess_P_Gen(i,:)=P_Gen_extract(i,:)-P_L_extract(i,:);
-
+    %{
+       Excess PV Generation = PV Generation - Power Demand 
+    %}
+    Excess_P_Gen(i,:) = P_Gen_extract(i,:) - P_L_extract(i,:);
 
 end
 
-Voltagebase(1:2,:)= [];
-P_Gen_extract(LS+1, 1) = 0;
+% Initialization
 
-% first day
+Voltagebase(1,:) = [];
+P_Gen_extract(LS+1,1) = 0; % PV generation is initialized to be 0 
+
+% First day
 for i = 1:1440
     for j = 1:38
         if Excess_P_Gen(i,j) < 0
-            GUI_WOB_D1(i,j)=P_L_extract(i,j)-P_Gen_extract(i,j);
+            GUI_WOB_D1(i,j) = P_L_extract(i,j) - P_Gen_extract(i,j);
         else    
             GUI_WOB_D1(i,j) = 0;
         end
@@ -168,7 +187,7 @@ end
 for i = 1441:2880
     for j = 1:38
         if Excess_P_Gen(i,j) < 0
-            GUI_WOB_D2(i,j)=P_L_extract(i,j)-P_Gen_extract(i,j);
+            GUI_WOB_D2(i,j) = P_L_extract(i,j) - P_Gen_extract(i,j);
         else    
             GUI_WOB_D2(i,j) = 0;
         end
@@ -176,7 +195,7 @@ for i = 1441:2880
 end
 
 % Charging time
-for j=1: LS-1
+for j = 1:LS-1 % 1-2880
     if Excess_P_Gen(j,1) < 0 && Excess_P_Gen(j+1, 1) > 0
         CHA_start(j,1) = j+1;
     elseif Excess_P_Gen(j,1) > 0 && Excess_P_Gen(j+1, 1) < 0
@@ -187,10 +206,10 @@ end
 CHA_start(CHA_start==0) = [1];
 CHA_stop(CHA_stop==0) = [1];
 
-% discharging time
+% Discharging time
 
-for j=1:LS-1
-    if P_Gen_extract(j,1) == 0 && P_Gen_extract(j+1, 1) > 0
+for j = 1:LS-1 % 1-2880 
+    if P_Gen_extract(j,1) == 0 && P_Gen_extract(j+1, 1) > 0 
         DISCHA_stop(j,1)=j;
     elseif P_Gen_extract(j,1)> 0 && P_Gen_extract(j+1,1) == 0
         DISCHA_start(j,1)=j+1;
@@ -201,27 +220,24 @@ DISCHA_start(DISCHA_start==0)=[1];
 DISCHA_stop(DISCHA_stop==0)=[1];
 
 % Load Flow with a Battery
-SOC_Final = 0.8;
-SOC_Reserve = 0.2;
+SOC_Final = 0.8; % maximum charge of BESS
+SOC_Reserve = 0.2; % minimum charge of BESS
 SOC_end = 0.45
 
 % Redirecting OpenDSS Battery File
-DSSText.Command='Redirect RBESS_500.dss'
-% DSSText.command='Redirect RBESS_500.dss'
-
+% DSSText.Command='Redirect RBESS_1500.dss'
+DSSText.Command='Redirect RBESS_2000.dss'
 DSSCircuit.SetActiveClass('Storage');
 AllStorageNames = DSSActiveClass.AllNames;
 
 % Charging Time
-C1=CHA_start(1,1); C2=CHA_start(1,1); C3=CHA_start(1,1); C4=CHA_start(1,1);
+C1=CHA_start(1,1); C2=CHA_start(1,1); C3=CHA_start(2,1); C4=CHA_start(2,1);
 
 % Discharging time
 D1=DISCHA_stop(1,1); D2=DISCHA_start(1,1); D3=DISCHA_stop(2,1); D4=DISCHA_stop(2,1);
-% D1=DISCHA_stop(1,1); D2=DISCHA_start(1,1); D3=DISCHA_stop(2,1); D4=DISCHA_start(2,1); 
-
-
+ 
 % Stored Energy
-SE = 0.8;
+SE = 0.8; % instananeous state-og-charge of the battery
 
 % RBESS
 RB = 38 % no of batteries
@@ -231,8 +247,10 @@ RB = 38 % no of batteries
 % BESS_kW=250;
 
 % 140% PV Penetration
-BESS_kWh=14*60;
-BESS_kW=250;
+
+% BESS_kWh=1500*60;  % Powerwall specs
+BESS_kWh=2000*60;  % Powerwall specs
+BESS_kW=250; % rating of the BESS in kW
 
 % Initial charging and discharging time
 for k = 1:RB
@@ -258,135 +276,137 @@ DSSText.Command = 'Set number=1';
 
 % daily mode, solving per minute
 
-for h=1:LS
+for h=1:LS % New voltage profile
     DSSText.command= 'solve';
     Voltagebat(:,h) - DSSCircuit.AllNodeVmagPUByPhase(1);
-    Voltagecus = Voltagebat([2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end],:);
+    Voltagecus = Voltagebat([1, 2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end],:);
     Loss = DSSCircuit.Losses
     % TPLbat(h,1)=Loss(1,1)/1000: % To convert to kW
     TPLbat(h,1)=Loss(1,1)/1000;
 
-    % Extract Grid Power Demand
+    % Extract Grid Power Demand: Second  Time
 
-        % Feeder 1
-        DSSCircuit.SetActiveElement(['Line.LINE1']);
-        Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
+    % Feeder 1
+    DSSCircuit.SetActiveElement(['Line.LINE1']);
+    Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
+
+    % Feeder 2
+    DSSCircuit.SetActiveElement(['Line.LINE2'])
+    Source2(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F2(i,1) = 1*(Source2(i,1) + Source2(i,3) + Source2(i,5));
     
-        % Feeder 2
-        DSSCircuit.SetActiveElement(['Line.LINE2']);
-        Source1(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F1(i,1) = 1*(Source1(i,1)+Source1(i,3)+Source1(i,5));
+    % Feeder 3
+    DSSCircuit.SetActiveElement(['Line.LINE6']);
+    Source3(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F3(i,1) = 1*(Source3(i,1)+Source3(i,3)+Source3(i,5));
+   
+    % Feeder 4
+    DSSCircuit.SetActiveElement(['Line.LINE10'])
+    Source4(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4(i,1) = 1*(Source4(i,1) + Source4(i,3) + Source4(i,5));
+
+    % Feeder 5
+    DSSCircuit.SetActiveElement(['Line.LINE12'])
+    Source5(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F5(i,1) = 1*(Source5(i,1) + Source5(i,3) + Source5(i,5));
+
+
+    % Feeder 6
+    DSSCircuit.SetActiveElement(['Line.LINE15'])
+    Source6(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F6(i,1) = 1*(Source6(i,1) + Source6(i,3) + Source6(i,5));
     
-        % Feeder 3
-        DSSCircuit.SetActiveElement(['Line.LINE6']);
-        Source2(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F2(i,1) = 1*(Source2(i,1)+Source2(i,3)+Source2(i,5));
+    % Feeder 7
+    DSSCircuit.SetActiveElement(['Line.LINE20'])
+    Source7(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F7(i,1) = 1*(Source7(i,1) + Source7(i,3) + Source7(i,5));
     
-        % Feeder 4
-        DSSCircuit.SetActiveElement(['Line.LINE10']);
-        Source3a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F3a(i,1) = 1*(Source3a(i,1)+Source3a(i,3)+Source3a(i,5));
+
+    % Feeder 8
+    DSSCircuit.SetActiveElement(['Line.LINE22'])
+    Source8(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F8(i,1) = 1*(Source8(i,1) + Source8(i,3) + Source8(i,5));
     
-        % Feeder 5
-        DSSCircuit.SetActiveElement(['Line.LINE12']);
-        Source3b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F3b(i,1) = 1*(Source3b(i,1)+Source3b(i,3)+Source3b(i,5));
+    % Feeder 9
+    DSSCircuit.SetActiveElement(['Line.LINE27'])
+    Source9(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F9(i,1) = 1*(Source9(i,1) + Source9(i,3) + Source9(i,5));
     
-        % Feeder 6
-        DSSCircuit.SetActiveElement(['Line.LINE15']);
-        Source4a(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4a(i,1) = 1*(Source4a(i,1)+Source4a(i,3)+Source4a(i,5));
+    % Feeder 10
+    DSSCircuit.SetActiveElement(['Line.LINE30'])
+    Source10(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F10(i,1) = 1*(Source10(i,1) + Source10(i,3) + Source10(i,5));
+     
+    % Feeder 11
+    DSSCircuit.SetActiveElement(['Line.LINE33'])
+    Source11(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F11(i,1) = 1*(Source11(i,1) + Source11(i,3) + Source11(i,5));
     
-        % Feeder 7
-        DSSCircuit.SetActiveElement(['Line.LINE20']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    % Feeder 12
+    DSSCircuit.SetActiveElement(['Line.LINE34'])
+    Source12(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F12(i,1) = 1*(Source12(i,1) + Source12(i,3) + Source12(i,5));
     
-        % Feeder 8
-        DSSCircuit.SetActiveElement(['Line.LINE22']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
+    % Feeder 13
+    DSSCircuit.SetActiveElement(['Line.LINE37'])
+    Source13(i,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F13(i,1) = 1*(Source13(i,1) + Source13(i,3) + Source13(i,5));
     
-        % Feeder 9
-        DSSCircuit.SetActiveElement(['Line.LINE27']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-    
-        % Feeder 10
-        DSSCircuit.SetActiveElement(['Line.LINE30']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-         
-        % Feeder 11
-        DSSCircuit.SetActiveElement(['Line.LINE33']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-        
-        % Feeder 12
-        DSSCircuit.SetActiveElement(['Line.LINE34']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-    
-        % Feeder 13
-        DSSCircuit.SetActiveElement(['Line.LINE37']);
-        Source4b(i,:) = DSSCircuit.ActiveCktElement.Powers;
-        Grid_power_F4b(i,1) = 1*(Source4b(i,1)+Source4b(i,3)+Source4b(i,5));
-    
-        Grid_power_woB(i,1) = Grid_power_F1(i,1)+Grid_power_F2(i,1)+Grid_power_F3a(i,1)+Grid_power_F3b(i,1)+Grid_power_F4a(i,1)+Grid_power_F4b(i,1);
+    Grid_power_wB(i,1) = Grid_power_F1(i,1)+Grid_power_F2(i,1)+Grid_power_F3(i,1)+Grid_power_F4(i,1)+Grid_power_F5(i,1)+Grid_power_F6(i,1)+Grid_power_F7(i,1)+Grid_power_F8(i,1)+Grid_power_F9(i,1)+Grid_power_F10(i,1)+Grid_power_F11(i,1)+Grid_power_F12(i,1)+Grid_power_F13(i,1);
 
         % Extract max voltage node power demand
 
-        DSSCircuit.SetActiveElement(['Line.LINE26']);
-        Line26_wB(h,:) = DSSCircuit.ActiveCktElement.Powers;
-        Line26_wB_all(h,1) = 1*(Line26_wB(h,1)+Line26_wB(h,3)+Line26_wB(h,5));
+    DSSCircuit.SetActiveElement(['Line.LINE26']);
+    Line26_wB(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Line26_wB_all(h,1) = 1*(Line26_wB(h,1)+Line26_wB(h,3)+Line26_wB(h,5));
 
         % Extract SOC
-        DSSCircuit.SetActiveClass('Storage');
-        for g = 1:RB
-            DSSCircuit.SetActiveElement(AllStorageNames{g});
-            SOC(h,g) = str2double(DSSCircuit.ActiveDSSElement.Properties('%stored').Val);
-            SOC(h,g) = SOC(h,g)/100;
+    DSSCircuit.SetActiveClass('Storage');
+    for g = 1:RB
+        DSSCircuit.SetActiveElement(AllStorageNames{g});
+        SOC(h,g) = str2double(DSSCircuit.ActiveDSSElement.Properties('%stored').Val);
+        SOC(h,g) = SOC(h,g)/100;
 
-            % Extract battery power
-            bp(h,:) = DSSCircuit.ActiveCktElement.Powers;
-            bat_power(h,g)= -1*(bp(h,1)+bp(h,3)+bp(h,5));
-        end 
+        % Extract battery power
+        bp(h,:) = DSSCircuit.ActiveCktElement.Powers;
+        bat_power(h,g)= -1*(bp(h,1)+bp(h,3)+bp(h,5));
+    end 
 
-        % Check and calculate the status
-        % Charging
-        if P_Gen_extract(h+1, 1) > 0
-            if Excess_P_Gen(h+1) > 0
-                if h> C1-1 && h<=C2-1
-                    for k = 1:RB
-                        R_charge(h+1,k) = (((SOC_Final-SOC(h,k))*BESS_kWh/(C2-h))/BESS_kW)*100;
-                    end
-                    % Excess PV Rate
-                    for k = 1:RB
-                        E_PV(h+1, k)=(Excess_P_Gen(h+1,k)/BESS_kW)*100;
-                    end
+    % Check and calculate the status
+    % Charging
+    if P_Gen_extract(h+1, 1) > 0
+        if Excess_P_Gen(h+1) > 0
+            if h> C1-1 && h<=C2-1
+                for k = 1:RB
+                    R_charge(h+1,k) = (((SOC_Final-SOC(h,k))*BESS_kWh/(C2-h))/BESS_kW)*100;
+                end
+                % Excess PV Rate
+                for k = 1:RB
+                    E_PV(h+1, k)=(Excess_P_Gen(h+1,k)/BESS_kW)*100;
+                end
 
-                    % Voltage
-                    % Net power
+                % Voltage
+                % Net power
 
-                    for k=1:RB
-                        if Voltagecus(k,h) >= 1.098
-                            P_expo_lim(h+1,k)=((1.098)/Voltagecus(k,h))*(Excess_P_Gen(h,k)-R_charge(h,k)*(BESS_kW/100))
-                        end
-
-                        net_power(h+1,k) = (Excess_P_Gen(h+1,k)-(R_charge(h+1,k)*(BESS_kW/100)));
-
-                        if net_power(h+1, k)> P_expo_lim(h+1,k) && P_expo_lim(h+1,k)~=0
-                            R_charge(h+1,k) = ((Excess_P_Gen(h+1,k)-P_expo_lim(h+1,k))/BESS_kW)*100;
-                        end
+                for k=1:RB
+                    if Voltagecus(k,h) >= 1.098
+                        P_expo_lim(h+1,k)=((1.098)/Voltagecus(k,h))*(Excess_P_Gen(h,k)-R_charge(h,k)*(BESS_kW/100))
                     end
 
-                    % Adjusting the rate
-                    for k=1:RB
-                        if E_PV(h+1,k) < R_charge(h+1,k)
-                            R_charge(h+1,k) = E_PV(h+1,k);
-                        end
+                    net_power(h+1,k) = (Excess_P_Gen(h+1,k)-(R_charge(h+1,k)*(BESS_kW/100)));
+
+                    if net_power(h+1, k)> P_expo_lim(h+1,k) && P_expo_lim(h+1,k)~=0
+                        R_charge(h+1,k) = ((Excess_P_Gen(h+1,k)-P_expo_lim(h+1,k))/BESS_kW)*100;
                     end
+                end
+
+                % Adjusting the rate
+                for k=1:RB
+                    if E_PV(h+1,k) < R_charge(h+1,k)
+                        R_charge(h+1,k) = E_PV(h+1,k);
+                    end
+                end
 
 
                 DSSCircuit.SetActiveClass('Storage');
@@ -402,108 +422,107 @@ for h=1:LS
                         DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=0'];
                         end
                     end
-                elseif h >= C3-1 && h <= C4-1
-                    for k = 1:RB
-                        R_charge(h+k, k) = (((SOC_Final-SOC(h,k))*BESS_kWh/(C4-h))/BESS_kW)*100;
-                    end 
+            elseif h >= C3-1 && h <= C4-1
+                for k = 1:RB
+                    R_charge(h+k, k) = (((SOC_Final-SOC(h,k))*BESS_kWh/(C4-h))/BESS_kW)*100;
+                end 
 
-                    % Excess PV Rate
+                % Excess PV Rate
 
-                    for k = 1:RB
-                        E_PV(h+1,k) = (Excess_P_Gen(h+1,k)/BESS_kW)*100;
-                    end 
+                for k = 1:RB
+                    E_PV(h+1,k) = (Excess_P_Gen(h+1,k)/BESS_kW)*100;
+                end 
 
-                    for k=1:RB
-                        if Voltagecus(k,h) >= 1.098
-                            P_expo_lim(h+1,l)=((1.098)/Voltagecus(k,h))*(Excess_P_Gen(h,k)-R_charge(h,k)*(BESS_kW/100));
-                        end
-
-                        net_power(h+1,k)=(Excess_P_Gen(h+1,k)-(R_charge(h+1,k)*(BESS_kW/100)));
-
-                        if net_power(h+1,k)>P_expo_lim(h+1,k) && P_expo_lim(h+1,k)~=0
-                            R_charge(h+1,k) = ((Excess_P_Gen(h+1,k)- P_expo_lim(h+1,k))/BESS_kW)*100;
-                        end
+                for k=1:RB
+                    if Voltagecus(k,h) >= 1.098
+                        P_expo_lim(h+1,l)=((1.098)/Voltagecus(k,h))*(Excess_P_Gen(h,k)-R_charge(h,k)*(BESS_kW/100));
                     end
 
-                    % Adjusting the rate
-                    for k=1:RB
-                        if E_PV(h+1,k)<R_charge(h+1,k)
-                            R_charge(h+1,k)=E_PV(h+1,k);
-                        end
+                    net_power(h+1,k)=(Excess_P_Gen(h+1,k)-(R_charge(h+1,k)*(BESS_kW/100)));
+
+                    if net_power(h+1,k)>P_expo_lim(h+1,k) && P_expo_lim(h+1,k)~=0
+                        R_charge(h+1,k) = ((Excess_P_Gen(h+1,k)- P_expo_lim(h+1,k))/BESS_kW)*100;
                     end
-                    
-                    DSSCircuit.SetActiveClass('Storage');
-                    for g = 1:RB
-                        if SOC(h,g)<0.8 
-                        DSSCircuit.SetActiveElement(AllStorageNames{g});
-                        DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = CHARGING'];
-                        DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=',num2str(R_charge(h+1,g))];
-                        else
-                        DSSCircuit.SetActiveElement(AllStorageNames{g});
-                        DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = IDLING'];
-                        DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=0'];
-                        end
+                end
+
+                % Adjusting the rate
+                for k=1:RB
+                    if E_PV(h+1,k)<R_charge(h+1,k)
+                        R_charge(h+1,k)=E_PV(h+1,k);
                     end
                 end
                 
-
-                % Idling
-
-            else   
-                for k =1:RB
-                    R_charge(h+1,k) = 0;
-                end
-
                 DSSCircuit.SetActiveClass('Storage');
                 for g = 1:RB
+                    if SOC(h,g)<0.8 
+                    DSSCircuit.SetActiveElement(AllStorageNames{g});
+                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = CHARGING'];
+                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=',num2str(R_charge(h+1,g))];
+                    else
                     DSSCircuit.SetActiveElement(AllStorageNames{g});
                     DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = IDLING'];
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=',num2str(R_charge(h+1,g))];
+                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=0'];
+                    end
                 end
             end
+           
+            % Idling
 
-            % Discharging
+        else   
+            for k =1:RB
+                R_charge(h+1,k) = 0;
+            end
 
-        else
-            if h<=D1-1
-                for k = 1:RB
-                    R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D1-h))/BESS_kW)*100;
-                end
+            DSSCircuit.SetActiveClass('Storage');
+            for g = 1:RB
+                DSSCircuit.SetActiveElement(AllStorageNames{g});
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = IDLING'];
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' %charge=',num2str(R_charge(h+1,g))];
+            end
+        end
 
-                DSSCircuit.SetActiveClass('Storage');
-                for g = 1:RB
-                    DSSCircuit.SetActiveElement(AllStorageNames{g});
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
-                end
-            elseif h>=(D2-1) && h<=(D3-1)
-                for k = 1:RB
-                    R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D3-h))/BESS_kW)*100;
-                end
+        % Discharging
 
-                for k = 1:RB
-                    R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D3-h))/BESS_kW)*100;
-                end
+    else
+        if h<=D1-1
+            for k = 1:RB
+                R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D1-h))/BESS_kW)*100;
+            end
 
-                for g = 1:RB
-                    DSSCircuit.SetActiveElement(AllStorageNames{g});
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
-                end
-            elseif h>=(D4-1) && h<=2880
-                for k = 1:RB
-                    R_discharge(h+1,k) = (((SOC(h,k)-SOC_end)*BESS_kWh/(LS-h))/BESS_kW)*100;
-                end
+            DSSCircuit.SetActiveClass('Storage');
+            for g = 1:RB
+                DSSCircuit.SetActiveElement(AllStorageNames{g});
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
+            end
+        elseif h>=(D2-1) && h<=(D3-1)
+            for k = 1:RB
+                R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D3-h))/BESS_kW)*100;
+            end
 
-                DSSCircuit.SetActiveClass('Storage');
-                for g = 1:RB
-                    DSSCircuit.SetActiveElement(AllStorageNames{g});
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
-                    DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
-                end
+            for k = 1:RB
+                R_discharge(h+1,k) = (((SOC(h,k)-SOC_Reserve)*BESS_kWh/(D3-h))/BESS_kW)*100;
+            end
+
+            for g = 1:RB
+                DSSCircuit.SetActiveElement(AllStorageNames{g});
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
+            end
+        elseif h>=(D4-1) && h<=2880
+            for k = 1:RB
+                R_discharge(h+1,k) = (((SOC(h,k)-SOC_end)*BESS_kWh/(LS-h))/BESS_kW)*100;
+            end
+
+            DSSCircuit.SetActiveClass('Storage');
+            for g = 1:RB
+                DSSCircuit.SetActiveElement(AllStorageNames{g});
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' State = DISCHARGING'];
+                DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge(h+1,g))];
             end
         end
     end
+end
 
 Voltagebat(1:2,:)=[];
 
@@ -546,7 +565,7 @@ for g = 1:RB
     DSSText.command=['Edit Storage.',AllStorageNames{g} ' %discharge=',num2str(R_discharge_wt_vc(1,g))];
 end
 
-% Setting rhe solving mode to daily
+% Setting  solving mode to daily
 % Activation of daily mode
 
 DSSText.Command='Set VoltageBases = "[33 11.3]"';
@@ -555,15 +574,17 @@ DSSText.command='Set MaxControlIter=1000';
 DSSText.command='set mode=daily stepsize=1m';
 DSSText.Command = 'Set number=1';
 
-for h=1:LS
+for h = 1:LS
     h
     DSSText.command = 'solve';
-    Voltagebat_wt_vc(:,h)=DSSCircuit.AllNodeVmagPUByPhase(1);
-    Voltagecus_wt_vc=Voltagebat_wt_vc([2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end],:);
+    Voltagebat_wt_vc(:,38)=DSSCircuit.AllNodeVmagPUByPhase(1);
+    Voltagecus_wt_vc=Voltagebat_wt_vc([1, 2:5, 6:9, 10:11, 12:14, 15:19, 20:21, 22:26, 27:29, 30:32, 33, 34:36, 37:end],:);
     Loss_wt_vc=DSSCircuit.Losses
-    TPLbat_wt_vc(h,1)=Loss_wt_vc(1,1)/1000; %to convert to kW
+    TPLbat_wt_vc(1,38)=Loss_wt_vc(1,1)/1000; %to convert to kW
 
     % Extract grid power demand
+
+    % third time
 
     % Feeder 1
     DSSCircuit.SetActiveElement(['Line.LINE1']);
@@ -582,55 +603,55 @@ for h=1:LS
 
     % Feeder 4
     DSSCircuit.SetActiveElement(['Line.LINE10']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source4_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F4_wt_vc(h,1) = 1*(Source4_wt_vc(h,1)+Source4_wt_vc(h,3)+Source4_wt_vc(h,5));
 
     % Feeder 5
     DSSCircuit.SetActiveElement(['Line.LINE12']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source5_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F5_wt_vc(h,1) = 1*(Source5_wt_vc(h,1)+Source5_wt_vc(h,3)+Source5_wt_vc(h,5));
 
     % Feeder 6
     DSSCircuit.SetActiveElement(['Line.LINE15']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source6_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F6_wt_vc(h,1) = 1*(Source6_wt_vc(h,1)+Source6_wt_vc(h,3)+Source6_wt_vc(h,5));
 
     % Feeder 7
     DSSCircuit.SetActiveElement(['Line.LINE20']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source7_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F7_wt_vc(h,1) = 1*(Source7_wt_vc(h,1)+Source7_wt_vc(h,3)+Source7_wt_vc(h,5));
 
     % Feeder 8
     DSSCircuit.SetActiveElement(['Line.LINE22']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source8_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F8_wt_vc(h,1) = 1*(Source8_wt_vc(h,1)+Source8_wt_vc(h,3)+Source8_wt_vc(h,5));
 
     % Feeder 9
     DSSCircuit.SetActiveElement(['Line.LINE27']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source9_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F9_wt_vc(h,1) = 1*(Source9_wt_vc(h,1)+Source9_wt_vc(h,3)+Source9_wt_vc(h,5));
 
     % Feeder 10
     DSSCircuit.SetActiveElement(['Line.LINE30']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source10_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F10_wt_vc(h,1) = 1*(Source10_wt_vc(h,1)+Source10_wt_vc(h,3)+Source10_wt_vc(h,5));
      
     % Feeder 11
     DSSCircuit.SetActiveElement(['Line.LINE33']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source11_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F11_wt_vc(h,1) = 1*(Source11_wt_vc(h,1)+Source11_wt_vc(h,3)+Source11_wt_vc(h,5));
     
     % Feeder 12
     DSSCircuit.SetActiveElement(['Line.LINE34']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source12_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F12_wt_vc(h,1) = 1*(Source12_wt_vc(h,1)+Source12_wt_vc(h,3)+Source12_wt_vc(h,5));
 
     % Feeder 13
     DSSCircuit.SetActiveElement(['Line.LINE37']);
-    Source4b_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
-    Grid_power_F4b_wt_vc(h,1) = 1*(Source4b_wt_vc(h,1)+Source4b_wt_vc(h,3)+Source4b_wt_vc(h,5));
+    Source13_wt_vc(h,:) = DSSCircuit.ActiveCktElement.Powers;
+    Grid_power_F13_wt_vc(h,1) = 1*(Source13_wt_vc(h,1)+Source13_wt_vc(h,3)+Source13_wt_vc(h,5));
 
-    Grid_power_wB_wt_vc(h,1) = Grid_power_F1_wt_vc(h,1)+Grid_power_F2_wt_vc(h,1)+Grid_power_F3a_wt_vc(h,1)+Grid_power_F3b_wt_vc(h,1)+Grid_power_F4a_wt_vc(h,1)+Grid_power_F4b_wt_vc(h,1);
+    Grid_power_wB_wt_vc(h,:) = Grid_power_F1_wt_vc(h,1)+Grid_power_F2_wt_vc(h,1)+Grid_power_F3_wt_vc(h,1)+Grid_power_F4_wt_vc(h,1)+Grid_power_F5_wt_vc(h,1)+Grid_power_F6_wt_vc(h,1)+Grid_power_F7_wt_vc(i,1)+Grid_power_F8_wt_vc(i,1)+Grid_power_F9_wt_vc(i,1)+gridf10vc(i,1)+Grid_power_F11_wt_vc(i,1)+Grid_power_F12_wt_vc(i,1)+Grid_power_F13_wt_vc(i,1);
 
     % Extract max voltage node power demand
 
@@ -759,7 +780,7 @@ for h=1:LS
 end
 
 for i=1:1440
-    for j= 1:124
+    for j= 1:38
         if Excess_P_Gen(i,j)<0
             GUI_WB_WoVC_D1(i,j)=P_L_extract(i,j)-P_Gen_extract(i,j)-bat_power_wt_vc(i,j);
         else 
@@ -769,7 +790,7 @@ for i=1:1440
 end
 
 for i=1441:2880
-    for j= 1:124
+    for j= 1:38
         if Excess_P_Gen(i,j)<0
             GUI_WB_WoVC_D2(i,j)=P_L_extract(i,j)-P_Gen_extract(i,j)-bat_power_wt_vc(i,j);
         else 
