@@ -191,7 +191,9 @@ for i = 1441:2880
         else    
             GUI_WOB_D2(i,j) = 0;
         end
-    end
+    end 
+    % bal bala
+    
 end
 
 % Charging time
